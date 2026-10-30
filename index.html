@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Giải quy hoạch tuyến tính"
+    />
+    <title>Quy hoạch tuyến tính</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232d70b3'/%3E%3Ctext x='32' y='46' font-size='44' text-anchor='middle' fill='white'%3EΣ%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <script defer src="js/math-fonts.js"></script>
+    <script defer src="js/solver.js"></script>
+    <script defer src="js/geometry.js"></script>
+    <script defer src="js/examples.js"></script>
+    <script defer src="js/report.js"></script>
+    <script defer src="js/geometry-view.js"></script>
+    <script defer src="js/session.js"></script>
+    <script defer src="js/app.js"></script>
+    <script defer src="js/layout.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-actions">
+          <button id="open-btn" class="btn subtle" title="Mở tệp bài toán JSON">
+            <span aria-hidden="true">▱</span> Mở bài</button
+          ><button id="save-btn" class="btn primary">Lưu</button>
+        </div>
+        <a class="brand" href="#" aria-label="QHTT"
+          ><strong>QHTT</strong></a
+        >
+        <div class="header-right">
+          <label
+            class="autosave-option"
+            id="autosave-label"
+            title="Tự động lưu các tab và dữ liệu nhập trên trình duyệt này"
+          >
+            <input id="autosave-toggle" type="checkbox" aria-describedby="autosave-help" />
+            <span>Tự động lưu</span>
+          </label>
+          <button id="help-btn" class="help-button" aria-label="Hướng dẫn sử dụng">?</button>
+        </div>
+      </header>
+      <nav class="tab-bar" aria-label="Các bài toán đang mở">
+        <div id="problem-tabs" class="problem-tabs" role="tablist" aria-label="Bài toán"></div>
+        <button
+          id="add-tab"
+          class="tab-action"
+          type="button"
+          title="Tạo tab mới"
+          aria-label="Tạo tab mới"
+        >
+          +
+        </button>
+        <button
+          id="reopen-tab"
+          class="tab-action"
+          type="button"
+          title="Mở lại tab vừa đóng"
+          aria-label="Mở lại tab vừa đóng"
+          disabled
+        >
+          ↶
+        </button>
+      </nav>
+      <div id="storage-notice" class="storage-notice" role="status" hidden></div>
+      <main id="workspace-panel" class="workspace" role="tabpanel">
+        <aside id="input-panel" class="input-panel" aria-label="Nhập bài toán">
+          <form id="problem-form" novalidate>
+            <div class="input-scroll">
+              <div class="panel-heading">
+                <h1>Bài toán</h1>
+                <button id="new-btn" type="button" class="btn subtle" title="Tạo bài toán trống">
+                  ＋ Bài mới
+                </button>
+              </div>
+              <button
+                id="example"
+                type="button"
+                class="btn secondary sample-button"
+                title="Nạp ngẫu nhiên một bài toán"
+              >
+                Tạo bài mẫu
+              </button>
+              <label class="field-label method-label" for="solve-method">Phương pháp</label>
+              <select id="solve-method" class="method-select">
+                <option value="bigm">Đơn hình</option>
+                <option value="geometry">Hình học (2 biến)</option>
+                <option value="two" hidden>Đơn hình hai pha</option>
+              </select>
+              <div class="form-divider"></div>
+              <label class="field-label" for="problem-title">Tiêu đề</label
+              ><input
+                id="problem-title"
+                type="text"
+                maxlength="150"
+                autocomplete="off"
+                placeholder="Bài toán"
+              />
+              <div class="dimensions">
+                <label>Số biến <input id="n" type="number" min="1" max="20" value="2" /></label
+                ><label>Ràng buộc <input id="m" type="number" min="0" max="40" value="2" /></label
+                ><button id="resize-btn" type="button" class="btn secondary">Áp dụng</button>
+              </div>
+              <div class="section-heading">
+                <h2>Hàm mục tiêu</h2>
+              </div>
+              <div class="objective-options">
+                <div class="segmented" aria-label="Chiều tối ưu">
+                  <label
+                    ><input type="radio" name="sense" value="max" checked /><span>Max</span></label
+                  ><label><input type="radio" name="sense" value="min" /><span>Min</span></label>
+                </div>
+              </div>
+              <div id="objective-input" class="input-table-wrap"></div>
+              <div class="section-heading">
+                <h2>Ràng buộc</h2>
+                <span id="constraint-count" class="count-chip">2 dòng</span>
+              </div>
+              <div id="constraint-input" class="input-table-wrap constraints-input"></div>
+              <div class="table-actions">
+                <button id="add-row" class="text-button" type="button">＋ Thêm ràng buộc</button
+                ><button id="remove-row" class="text-button muted" type="button">
+                  − Xóa dòng cuối
+                </button>
+              </div>
+              <p class="field-hint">Nhập số hoặc phân số, ví dụ 0.5, 3/7. Hỗ trợ dán từ Excel.</p>
+              <div id="input-error" class="input-error" role="alert" hidden></div>
+            </div>
+            <div class="solve-bar">
+              <button id="solve-btn" class="btn primary" type="submit">
+                <span>Giải</span><span aria-hidden="true">→</span></button
+              ><button id="cancel-btn" type="button" class="btn secondary" hidden>Dừng</button>
+              <p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> để giải</p>
+            </div>
+          </form>
+        </aside>
+        <div
+          id="panel-resizer"
+          class="panel-resizer"
+          role="separator"
+          tabindex="0"
+          aria-label="Điều chỉnh độ rộng panel nhập bài toán"
+          aria-orientation="vertical"
+          aria-controls="input-panel"
+          aria-valuemin="300"
+          aria-valuemax="800"
+          aria-valuenow="420"
+          title="Kéo để chỉnh độ rộng · Nhấp đúp để đặt lại · Phím ← → để điều chỉnh"
+        >
+          <span aria-hidden="true"></span>
+        </div>
+        <section class="solution-panel" aria-label="Lời giải">
+          <div class="solution-intro">
+            <div>
+              <h2>Lời giải</h2>
+              <p id="solution-subtitle" hidden></p>
+            </div>
+          </div>
+          <div id="stale-banner" class="stale-banner" hidden>
+            Dữ liệu đã thay đổi. Nhấn <b>Giải</b> để cập nhật kết quả.
+          </div>
+          <div id="busy-banner" class="busy-banner" role="status" hidden>
+            <span class="spinner"></span> Đang giải…
+          </div>
+          <div id="result-summary" class="result-summary" hidden aria-live="polite"></div>
+          <div class="result-toolbar">
+            <span>Chi tiết lời giải</span>
+            <div class="export-actions">
+              <button id="print-btn" class="btn subtle" disabled>
+                ▤ <span>In / lưu PDF</span>
+              </button>
+            </div>
+          </div>
+          <article id="report" class="report is-empty" aria-live="off">
+            <div class="empty-state">
+              <h2>Chưa có lời giải</h2>
+              <p>Nhập dữ liệu hoặc tạo bài mẫu, sau đó nhấn <b>Giải</b>.</p>
+            </div>
+          </article>
+        </section>
+      </main>
+      <div id="toast" class="toast" role="status" hidden></div>
+    </div>
+    <div id="print-output" class="report"></div>
+    <input id="file-input" type="file" accept=".json,application/json" hidden />
+    <dialog id="help-dialog">
+      <div class="dialog-header">
+        <h2>Hướng dẫn</h2>
+        <button id="close-help" class="icon-button" aria-label="Đóng hướng dẫn">×</button>
+      </div>
+      <div class="help-content">
+        <h3>Nhập bài toán</h3>
+        <p>
+          Chọn số biến và số ràng buộc, nhấn Áp dụng. Nhập hệ số mục tiêu, điều kiện dấu và các ràng
+          buộc. Dùng 0 cho hệ số không có.
+        </p>
+        <p>Tạo bài mẫu nạp ngẫu nhiên một đề. Nhấn Giải hoặc Ctrl+Enter để tính.</p>
+        <h3>Định dạng dữ liệu</h3>
+        <p>
+          Chấp nhận số nguyên, số thập phân và phân số: −2, 0.5, 3/7. Có thể dán vùng dữ liệu từ
+          Excel; dấu quan hệ dùng &lt;=, =, &gt;=; miền biến dùng pos, neg, free.
+        </p>
+        <h3>Lưu và xuất</h3>
+        <p>
+          Lưu tải đề của tab hiện tại dưới dạng JSON; Mở bài nạp lại đề trong tab mới. JSON giữ
+          nguyên hệ số, điều kiện dấu và phương pháp giải. In / lưu PDF mở hộp thoại in.
+        </p>
+        <h3>Các tab bài toán</h3>
+        <p>
+          Nhấn + hoặc Bài mới để mở tab trống. Mỗi tab giữ riêng đề và lời giải. Nhấn × để đóng; ↶
+          mở lại tab vừa đóng (giữ tối đa 10 tab). Khi thanh tab được chọn, dùng ← / →, Home hoặc
+          End để chuyển tab. Các tab tạm khóa khi đang tính; nhấn Dừng để thao tác tiếp.
+        </p>
+        <h3>Tự động lưu phiên làm việc</h3>
+        <p id="autosave-help">
+          Tùy chọn Tự động lưu mặc định tắt. Bật để lưu các tab, dữ liệu nhập và tab đang chọn vào
+          localStorage trên trình duyệt này. Khi mở lại, nhấn Giải để tính lại lời giải. Tắt tùy
+          chọn sẽ xóa bản lưu tự động, giữ nguyên các tab đang mở.
+        </p>
+        <p>
+          Phiên được khôi phục khi dùng cùng trình duyệt và địa chỉ mở ứng dụng. Dùng Lưu để tải
+          JSON và chuyển đề sang máy khác hoặc giữ bản sao riêng.
+        </p>
+        <h3>Bố cục</h3>
+        <p>
+          Kéo thanh ngăn để đổi độ rộng. Nhấp đúp để đặt lại. Có thể chọn thanh bằng Tab và điều
+          chỉnh bằng phím ← / →.
+        </p>
+        <h3>Phương pháp hình học</h3>
+        <p>
+          Chọn Hình học (2 biến), nhập đúng hai biến và các ràng buộc tạo miền nghiệm bị chặn rồi nhấn Giải. Miền không bị chặn sẽ được thông báo và không hiển thị lời giải hay animation. Đồ thị hiển thị các đường biên,
+          miền nghiệm và đường mức. Đường mức tự chạy, dừng 5 giây tại tối ưu rồi lặp lại. Nhấn Tạm
+          dừng hoặc kéo thanh a để điều khiển. Vùng đỏ ở ngoài miền nghiệm; vùng xanh lục thuộc miền
+          nghiệm. Cuộn chuột để thu phóng tại con trỏ, kéo hình để di chuyển và bấm điểm để xem tọa
+          độ. Bấm đường thẳng để xem phương trình. Vừa khung đặt lại vùng nhìn. Lời giải gồm dựng
+          miền D, các đỉnh, đường mức và kết luận. In / lưu PDF dùng hình tổng quan cùng lời giải.
+        </p>
+        <h3>Quy ước tính toán</h3>
+        <div class="math-block">
+          Δⱼ = Σ cᴮᵢaᵢⱼ − cⱼ<br />Max: Δⱼ ≥ 0 tại tối ưu.<br />Min: Δⱼ ≤ 0 tại tối ưu.
+        </div>
+        <p>
+          Biến giả được xử lý bằng M tượng trưng. Dấu × chỉ cột đã loại. Các tệp JSON hai pha vẫn
+          được hỗ trợ.
+        </p>
+        <h3>Phạm vi</h3>
+        <p>
+          Quy hoạch tuyến tính với biến liên tục: 1–20 biến, tối đa 40 ràng buộc. Hỗ trợ Max/Min,
+          các dấu ≤, =, ≥ và biến tự do. Không hỗ trợ biến nguyên, nhị phân hoặc hàm phi tuyến.
+        </p>
+      </div>
+    </dialog>
+    <noscript>Ứng dụng cần bật JavaScript trong trình duyệt.</noscript>
+  </body>
+</html>
